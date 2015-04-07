@@ -37,12 +37,25 @@ public class LoginActivity extends BaseActivity {
         activity = this;
 
         btnSignIn = (SignInButton) findViewById(R.id.sign_in_button);
+
+        btnSignIn.setOnClickListener(new View.OnClickListener() {
+            public void onClick(View v) {
+                if (!mGoogleApiClient.isConnecting()) {
+                    mSignInProgress = STATE_SIGN_IN;
+                    Log.d("","ZZZZZZZ connecting");
+                    mGoogleApiClient.connect();
+                }
+            }
+        });
+
+/*
+
         btnSignIn.setOnClickListener(new View.OnClickListener() {
             public void onClick(View v) {
                 resolveSignInError();
             }
         });
-
+*/
         if (savedInstanceState != null) {
             mSignInProgress = savedInstanceState
                     .getInt(SAVED_PROGRESS, STATE_DEFAULT);
@@ -51,16 +64,15 @@ public class LoginActivity extends BaseActivity {
 
     @Override
     public void onConnected(Bundle connectionHint){
-        Log.d(TAG, "onConnected");
-        if(mSignInProgress == STATE_SIGN_IN) {
-            Person currentUser = Plus.PeopleApi.getCurrentPerson(mGoogleApiClient);
-            Log.d(TAG, currentUser.getDisplayName());
-            saveAccountPreference(currentUser.getId());
-            mSignInProgress = STATE_DEFAULT;
-            finish();
-            Intent i = new Intent(activity, MainActivity.class);
-            startActivity(i);
-        }
+        Log.d(TAG, "onConnectedZZZ");
+        Log.d(TAG, "starting main activity");
+        Person currentUser = Plus.PeopleApi.getCurrentPerson(mGoogleApiClient);
+        Log.d(TAG, currentUser.getDisplayName());
+        saveAccountPreference(currentUser.getId());
+        mSignInProgress = STATE_DEFAULT;
+        finish();
+        Intent i = new Intent(activity, MainActivity.class);
+        startActivity(i);
         mSignInProgress = STATE_DEFAULT;
     }
 

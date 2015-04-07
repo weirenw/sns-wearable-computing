@@ -13,6 +13,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.ArrayList;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
 import edu.gatech.cc.cs7470.facecard.Model.FaceCard;
@@ -20,19 +21,23 @@ import edu.gatech.cc.cs7470.facecard.Model.FaceCard;
 /**
  * Created by miseonpark on 3/24/15.
  */
-public class DiscoverNearbyPeopleTask extends AsyncTask<String, String, String> {
+public class DiscoverNearbyPeopleTask extends AsyncTask<ArrayList<String>, String, String> {
 
     private static final String TAG = "FaceCard DiscoverNearbyPeopleTask";
     private FaceCard faceCard;
 
     /* Get Info for Facecard */
     @Override
-    protected String doInBackground(String... params) {
+    protected String doInBackground(ArrayList<String> ... params) {
 
-        String inputBluetoothId = params[0];
+        String srcBTID = params[0].get(0);
+        int lastIndex = params[0].size()-1;
+        ArrayList<String> targetBTIDs = (ArrayList<String>) params[0].subList(1,lastIndex);
 
         //create string
-        String rest = "?bluetooth_id=" + inputBluetoothId;
+        String rest = "?source=" + srcBTID + "&target=";
+        for(String i : targetBTIDs)
+            rest = rest + ","+ i;
 
         rest = rest.replace(" ", "%20");
         Log.d(TAG, rest);

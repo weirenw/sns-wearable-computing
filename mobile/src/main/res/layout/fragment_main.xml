@@ -1,11 +1,16 @@
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:context=".MainActivity$PlaceholderFragment">
+<LinearLayout
+
     android:orientation="vertical"
     android:layout_width="fill_parent"
     android:layout_height="wrap_content"
     android:layout_alignParentTop="true"
     android:layout_centerHorizontal="true"
-    tools:context=".MainActivity$PlaceholderFragment">
+    >
 
     <LinearLayout
         android:id="@+id/profile_cover"
@@ -157,7 +162,7 @@
                 android:layout_height="40dp"
                 android:layout_weight="0.1"
                 android:id="@+id/image_google_icon"
-                android:src="@drawable/google"/>
+                android:src="@drawable/profile_picture_default"/>
             <TextView
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -229,3 +234,4 @@
     </LinearLayout>
 
 </LinearLayout>
+</ScrollView>

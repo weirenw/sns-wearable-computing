@@ -1,8 +1,13 @@
 package edu.gatech.cc.cs7470.facecard.View.activities;
 
 import android.app.AlertDialog;
+import android.bluetooth.BluetoothAdapter;
+import android.bluetooth.BluetoothDevice;
+import android.content.BroadcastReceiver;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.FragmentManager;
@@ -58,16 +63,43 @@ public class MainActivity extends BaseActivity
                     Plus.AccountApi.getAccountName(mGoogleApiClient));
         }
 
+        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        if (mBluetoothAdapter == null) {
+            Log.d("","device does not support bluetooth");
+        }
+        if (!mBluetoothAdapter.isEnabled()) {
+            Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
+            startActivityForResult(enableBtIntent, Constants.REQUEST_ENABLE_BT);
+        }
+
         //check for bluetooth registration
         SharedPreferences prefs = getSharedPreferences(Constants.PACKAGE_NAME, MODE_PRIVATE);
-        if(!prefs.contains(Constants.SHARED_PREFERENCES_BLUETOOTH)){
+
+        //if(!prefs.contains(Constants.SHARED_PREFERENCES_BLUETOOTH)){
             registerBluetooth();
-        }
+       // }
+
+        //discover nearby bluetooth enabled devices
+        mBluetoothAdapter.startDiscovery();
 
         if (savedInstanceState == null) {
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, new MainFragment()).commit();
         }
+
+        final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+            public void onReceive(Context context, Intent intent) {
+                String action = intent.getAction();
+                // When discovery finds a device
+                if (BluetoothDevice.ACTION_FOUND.equals(action)) {
+                    // Get the BluetoothDevice object from the Intent
+                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+                    Log.d(TAG, "device found, name = " + device.getName() + ", bluetooth id = " + device.getAddress());
+                }
+            }
+        };
+        IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
 
 //        tv_profile_description = (TextView)findViewById(R.id.profile_description);
 //        tv_profile_organization = (TextView)findViewById(R.id.profile_organization);
@@ -200,8 +232,14 @@ public class MainActivity extends BaseActivity
 
     private void registerBluetooth(){
 
+        final String mEmail=profile.getEmail();
         final String uuid = (new BluetoothUtil()).getBluetoothId();
-        profile.setBluetoothInfo(new Bluetooth(uuid,profile.getEmail()));
+        final String mName = profile.getName();
+        final String mTagline = profile.getTagline();
+        profile.setBluetoothInfo(new Bluetooth(uuid,mEmail));
+        final String mBluetoothID = profile.getBluetoothInfo().getBluetoothId();
+
+
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Bluetooth Registration");
@@ -211,9 +249,7 @@ public class MainActivity extends BaseActivity
             @Override
             public void onClick(DialogInterface dialog, int which) {
 
-                new RegisterBluetoothTask().execute(profile.getEmail(),
-                        profile.getBluetoothInfo().getBluetoothId(), profile.getName(),
-                        profile.getName(), profile.getTagline());
+                new RegisterBluetoothTask().execute(mEmail,mBluetoothID, mName, mTagline);
 
                 //save
                 SharedPreferences prefs = getSharedPreferences(Constants.PACKAGE_NAME, MODE_PRIVATE);

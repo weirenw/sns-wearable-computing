@@ -182,6 +182,7 @@ public abstract class BaseActivity extends ActionBarActivity implements
    * the user to consent to the permissions being requested by your app, a
    * setting to enable device networking, etc.
    */
+
     public boolean resolveSignInError() {
         Log.d(TAG, "resolveSignInError");
         if (mSignInIntent != null) {
@@ -235,6 +236,7 @@ public abstract class BaseActivity extends ActionBarActivity implements
                                 }
                             });
                 } else {
+                    Log.e(TAG, "error id " + id);
                     return new AlertDialog.Builder(this)
                             .setMessage(R.string.play_services_error)
                             .setPositiveButton(R.string.close,

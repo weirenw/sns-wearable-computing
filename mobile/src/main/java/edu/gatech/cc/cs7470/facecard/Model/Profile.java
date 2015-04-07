@@ -27,7 +27,10 @@ public class Profile {
 //        bluetoothInfo = new Bluetooth();
         name = person.getDisplayName();
         tagline = person.getTagline();
-        organization = person.getOrganizations().get(0).getName();
+        if(person.getOrganizations()!=null)
+            organization = person.getOrganizations().get(0).getName();
+        else
+            organization = "organization placeholder";
         profile_picture_url = "";
         if(person.hasImage()){
             if(person.getImage().hasUrl()){
