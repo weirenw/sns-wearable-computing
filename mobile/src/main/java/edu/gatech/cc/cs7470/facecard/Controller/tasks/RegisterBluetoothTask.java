@@ -27,7 +27,7 @@ import edu.gatech.cc.cs7470.facecard.Constants;
  */
 public class RegisterBluetoothTask extends AsyncTask<String, String, String> {
 
-    private static final String TAG = "FaceCard RegisterBluetoothTask";
+    private static final String TAG = "RegisterBluetoothTask";
 
     /* Register Bluetooth */
     @Override

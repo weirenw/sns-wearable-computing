@@ -70,9 +70,9 @@ public class LoginActivity extends BaseActivity {
         Log.d(TAG, currentUser.getDisplayName());
         saveAccountPreference(currentUser.getId());
         mSignInProgress = STATE_DEFAULT;
-        finish();
         Intent i = new Intent(activity, MainActivity.class);
         startActivity(i);
+	    finish();
         mSignInProgress = STATE_DEFAULT;
     }
 

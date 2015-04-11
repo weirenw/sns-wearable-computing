@@ -2,39 +2,39 @@
 <items version="2" >
 
     <item
-        jar="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.android.support\support-v4\21.0.3\classes.jar"
-        jumboMode="false"
-        revision="21.1.1"
-        sha1="2c91c949a45a21cdecf26e03951e46c7beec9ad8">
-        <dex dex="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\classes-9866fe1e726efeb0a3ea999e46d82fe11f9b7b0b.jar" />
-    </item>
-    <item
-        jar="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.google.android.gms\play-services\6.5.87\classes.jar"
+        jar="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.google.android.gms\play-services\6.5.87\classes.jar"
         jumboMode="false"
         revision="21.1.1"
         sha1="dd9247ea0fabe8ee479638c4b4a23e93752be256">
-        <dex dex="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\classes-97e292a08cb710ae8ffe3b2ce3a737e922ed5553.jar" />
+        <dex dex="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\classes-4e50453289e4968a648fbccce7405b13c4051ef8.jar" />
     </item>
     <item
-        jar="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.android.support\support-v4\21.0.3\libs\internal_impl-21.0.3.jar"
+        jar="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.android.support\support-v4\21.0.3\classes.jar"
         jumboMode="false"
         revision="21.1.1"
-        sha1="01ec05bfbafcc07646ba813000bf2ef11742dd03">
-        <dex dex="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\internal_impl-21.0.3-afc955e4f20ffef75168a6b6c7bef3bae6de1032.jar" />
+        sha1="2c91c949a45a21cdecf26e03951e46c7beec9ad8">
+        <dex dex="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\classes-af01ecb19d58ad135a92153b97ad7be42d2a9aee.jar" />
     </item>
     <item
-        jar="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.android.support\appcompat-v7\21.0.3\classes.jar"
-        jumboMode="false"
-        revision="21.1.1"
-        sha1="81d42bf983a8741f4888a6e333e454e4a5e0eeb7">
-        <dex dex="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\classes-eb5a523cd0631efc0aa24cadfc139db0f8b4a7ba.jar" />
-    </item>
-    <item
-        jar="C:\Users\cxz\AppData\Local\Android\sdk\extras\android\m2repository\com\android\support\support-annotations\21.0.3\support-annotations-21.0.3.jar"
+        jar="E:\Program Files\Android\sdk\extras\android\m2repository\com\android\support\support-annotations\21.0.3\support-annotations-21.0.3.jar"
         jumboMode="false"
         revision="21.1.1"
         sha1="4b74cefe1f0c1b819e7260c8627a14674e37fd35">
-        <dex dex="C:\Users\cxz\Desktop\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\support-annotations-21.0.3-e8eba2900d5de42b6766c8a8c9c0a3c1be6ac25d.jar" />
+        <dex dex="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\support-annotations-21.0.3-99adbe1eab895bec8c4be3f9efecccc31579140d.jar" />
+    </item>
+    <item
+        jar="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.android.support\appcompat-v7\21.0.3\classes.jar"
+        jumboMode="false"
+        revision="21.1.1"
+        sha1="81d42bf983a8741f4888a6e333e454e4a5e0eeb7">
+        <dex dex="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\classes-a1cec89733853950830d4af31345cfab43dbc099.jar" />
+    </item>
+    <item
+        jar="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\exploded-aar\com.android.support\support-v4\21.0.3\libs\internal_impl-21.0.3.jar"
+        jumboMode="false"
+        revision="21.1.1"
+        sha1="01ec05bfbafcc07646ba813000bf2ef11742dd03">
+        <dex dex="E:\WorkSpace\sns-wearable-computing\mobile\build\intermediates\pre-dexed\debug\internal_impl-21.0.3-d42cf17b30994b794eb3aae8d90c7e5c020130d1.jar" />
     </item>
 
 </items>
