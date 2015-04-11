@@ -8,8 +8,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -22,7 +20,6 @@ import com.google.android.glass.touchpad.GestureDetector;
 import com.google.android.glass.widget.CardScrollAdapter;
 import com.google.android.glass.widget.CardScrollView;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -32,11 +29,9 @@ import java.util.UUID;
  * Created by miseonpark on 3/11/15.
  */
 public class MainActivity extends Activity {
-
     private List<Card> mCards;
     private CardScrollView mCardScrollView;
-
-    public static final UUID MY_UUID = UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
+    public static final UUID MY_UUID = UUID.fromString("0f3561b9-bda5-4672-84ff-ab1f98e349b6");
     public BluetoothAdapter mBluetoothAdapter;
     private Context context = this;
     Set<BluetoothDevice> devicesArray;

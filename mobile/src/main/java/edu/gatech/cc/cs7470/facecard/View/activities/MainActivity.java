@@ -117,7 +117,7 @@ public class MainActivity extends BaseActivity
 		//check if bluetooth is already connected with glass
 		if (mBluetoothSocket != null && mBluetoothSocket.isConnected()) {
 			AlertDialog ad2 = new AlertDialog.Builder(MainActivity.this).setMessage("There's a connected Glass yet.")
-					.setPositiveButton("OK", null)
+					.setPositiveButton("OK", null).setCancelable(false)
 					.create();
 			ad2.show();
 			return;
@@ -125,7 +125,7 @@ public class MainActivity extends BaseActivity
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
 		if (mBluetoothAdapter == null) {
 			Log.d("","device does not support bluetooth");
-			return;
+			finish();
 		}
 		//enable bluetooth
 		if (!mBluetoothAdapter.isEnabled()) {
@@ -147,7 +147,7 @@ public class MainActivity extends BaseActivity
 		//start discover process, it lasts 12 seconds. results are handled in mReceiver
 		mBluetoothAdapter.startDiscovery();
 		//reminder it to user
-		ad1 = new AlertDialog.Builder(MainActivity.this).setMessage("Detecting bluetooth devices...").create();
+		ad1 = new AlertDialog.Builder(MainActivity.this).setMessage("Detecting bluetooth devices...").setCancelable(false).create();
 		ad1.show();
 	}
 
@@ -183,7 +183,7 @@ public class MainActivity extends BaseActivity
 									mBluetoothSocket.connect();
 								} catch (Exception e) {
 									Log.v("exception", e.toString());
-									return;
+									MainActivity.this.finish();
 								}
 
 								isPaired = true;
@@ -191,6 +191,7 @@ public class MainActivity extends BaseActivity
 								AlertDialog d = new AlertDialog.Builder(MainActivity.this)
 										.setMessage("Connection Succeeded!")
 										.setPositiveButton("OK", null)
+										.setCancelable(false)
 										.create();
 								d.show();
 
@@ -199,6 +200,7 @@ public class MainActivity extends BaseActivity
 							}
 						})
 						.setNegativeButton("Cancel", null)
+						.setCancelable(false)
 						.create();
 				chooseBluetoothDialog.show();
 			}

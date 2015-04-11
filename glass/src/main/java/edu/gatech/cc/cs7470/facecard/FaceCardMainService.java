@@ -1,8 +1,5 @@
 package edu.gatech.cc.cs7470.facecard;
 
-import com.google.android.glass.timeline.LiveCard;
-import com.google.android.glass.timeline.LiveCard.PublishMode;
-
 import android.app.PendingIntent;
 import android.app.Service;
 import android.bluetooth.BluetoothAdapter;
@@ -13,7 +10,9 @@ import android.content.Intent;
 import android.os.Handler;
 import android.os.IBinder;
 import android.widget.RemoteViews;
-import android.widget.Toast;
+
+import com.google.android.glass.timeline.LiveCard;
+import com.google.android.glass.timeline.LiveCard.PublishMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -63,6 +62,8 @@ public class FaceCardMainService extends Service {
 
         mBluetoothAdapter = bluetoothManager.getAdapter();
 
+	    //we have to assume bluetooth is enabled because it is Service here, no interactive UI works
+	    /*
         if (mBluetoothAdapter == null) {
             Toast toast = Toast.makeText(context, "Device does not support bluetooth", Toast.LENGTH_SHORT);
             toast.show();
@@ -75,22 +76,20 @@ public class FaceCardMainService extends Service {
                 //push to the setting view to enable the bluetooth
                 Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 startActivity(enableBtIntent);
+            }*/
+        scanLeDevice(true);
+        if (mLiveCard == null) {
+            mLiveCard = new LiveCard(this, LIVE_CARD_TAG);
 
-            }
-            scanLeDevice(true);
-            if (mLiveCard == null) {
-                mLiveCard = new LiveCard(this, LIVE_CARD_TAG);
+            RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.face_card_main);
+            mLiveCard.setViews(remoteViews);
 
-                RemoteViews remoteViews = new RemoteViews(getPackageName(), R.layout.face_card_main);
-                mLiveCard.setViews(remoteViews);
-
-                // Display the options menu when the live card is tapped.
-                Intent menuIntent = new Intent(this, LiveCardMenuActivity.class);
-                mLiveCard.setAction(PendingIntent.getActivity(this, 0, menuIntent, 0));
-                mLiveCard.publish(PublishMode.REVEAL);
-            } else {
-                mLiveCard.navigate();
-            }
+            // Display the options menu when the live card is tapped.
+            Intent menuIntent = new Intent(this, LiveCardMenuActivity.class);
+            mLiveCard.setAction(PendingIntent.getActivity(this, 0, menuIntent, 0));
+            mLiveCard.publish(PublishMode.REVEAL);
+        } else {
+            mLiveCard.navigate();
         }
 
         return START_STICKY;

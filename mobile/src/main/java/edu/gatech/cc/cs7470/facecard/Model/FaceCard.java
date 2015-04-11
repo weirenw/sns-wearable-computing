@@ -1,9 +1,12 @@
 package edu.gatech.cc.cs7470.facecard.Model;
 
+import java.io.Serializable;
+
 /**
  * Created by miseonpark on 3/24/15.
  */
-public class FaceCard {
+public class FaceCard implements Serializable {
+	private static final long serialVersionUID = 103701L;
 
     private String bluetoothId, accountId, name, tag;
 
