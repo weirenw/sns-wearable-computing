@@ -18,6 +18,7 @@ import android.support.v7.app.ActionBar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.widget.Toast;
 
 import com.google.android.gms.plus.Plus;
 
@@ -98,6 +99,16 @@ public class MainActivity extends BaseActivity
 	//------------------------------ bluetooth part --------------------------------------------
 
 	@Override
+	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+		if (requestCode == Constants.REQUEST_ENABLE_BT) {
+			if (resultCode == RESULT_OK) {
+				if (!isBtRegistered) 	registerBluetooth();
+				if (!isConnected) pairToGlass();
+			}
+		}
+	}
+
+	@Override
 	protected void onResume() {  //runs when app is either re-opened from backend or launched
 		//update necessary UI here
 
@@ -107,11 +118,9 @@ public class MainActivity extends BaseActivity
 	}
 
 	private BluetoothAdapter mBluetoothAdapter;
-	private HashMap<String, BluetoothDevice> btMap;
 	private BluetoothSocket mBluetoothSocket;
 	boolean isBtRegistered = false;
-	boolean isPaired = false;
-	AlertDialog ad1;
+	boolean isConnected = false;
 
 	private void blueToothWork() {
 		//check if bluetooth is already connected with glass
@@ -133,79 +142,46 @@ public class MainActivity extends BaseActivity
 			startActivityForResult(enableBtIntent, Constants.REQUEST_ENABLE_BT);
 		} else {
 			if (!isBtRegistered) 	registerBluetooth();
-			if (!isPaired) pairToGlass();
+			if (!isConnected) pairToGlass();
 		}
 	}
 
 	private void pairToGlass() {  //bluetooth has to be enabled
-		// Register the BroadcastReceiver
-		registerReceiver(mReceiver, new IntentFilter(BluetoothDevice.ACTION_FOUND)); // Don't forget to unregister during onDestroy
-		registerReceiver(mReceiver, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
-
-		//record all bluetooth devices
-		btMap = new HashMap<String, BluetoothDevice>();
-		//start discover process, it lasts 12 seconds. results are handled in mReceiver
-		mBluetoothAdapter.startDiscovery();
-		//reminder it to user
-		ad1 = new AlertDialog.Builder(MainActivity.this).setMessage("Detecting bluetooth devices...").setCancelable(false).create();
-		ad1.show();
-	}
-
-	// this receiver is only used when detecting glass
-	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
-		BluetoothDevice[] bdArray;
-		public void onReceive(Context context, Intent intent) {
-			String action = intent.getAction();
-			// When discovery finds a device
-			if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-				// Get the BluetoothDevice object from the Intent
-				BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-				btMap.put(device.getAddress(), device);
-				Log.v("debug", "found device: " + device.getName() + " " + device.getAddress());
-			}else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {
-				mBluetoothAdapter.cancelDiscovery();
-				unregisterReceiver(this);
-				ad1.cancel();
-				bdArray = btMap.values().toArray(new BluetoothDevice[0]);
-				String[] items = new String[bdArray.length];
-				for (int i = 0; i < bdArray.length; ++i) {
-					items[i] = bdArray[i].getName() + "\n" + bdArray[i].getAddress();
-				}
-
-				AlertDialog chooseBluetoothDialog = new AlertDialog.Builder(MainActivity.this)
-						.setTitle("Please select your Google Glass")
-						.setItems(items, new DialogInterface.OnClickListener() {
-							public void onClick(DialogInterface dialog, int which) {
-								// The 'which' argument contains the index position
-								// of the selected item
-								try {
-									mBluetoothSocket = bdArray[which].createRfcommSocketToServiceRecord(UUID.fromString("0f3561b9-bda5-4672-84ff-ab1f98e349b6"));
-									mBluetoothSocket.connect();
-								} catch (Exception e) {
-									Log.v("exception", e.toString());
-									MainActivity.this.finish();
-								}
-
-								isPaired = true;
-								Log.v("debug", bdArray[which].getName() + which);
-								AlertDialog d = new AlertDialog.Builder(MainActivity.this)
-										.setMessage("Connection Succeeded!")
-										.setPositiveButton("OK", null)
-										.setCancelable(false)
-										.create();
-								d.show();
-
-								//use an AsynTask to detect bt devices nearby and send data to glass periodically
-								new glassCommTask().execute();
-							}
-						})
-						.setNegativeButton("Cancel", null)
-						.setCancelable(false)
-						.create();
-				chooseBluetoothDialog.show();
-			}
+		final BluetoothDevice[] bdArray = mBluetoothAdapter.getBondedDevices().toArray(new BluetoothDevice[0]);
+		String[] items = new String[bdArray.length];
+		for (int i = 0; i < bdArray.length; ++i) {
+			items[i] = bdArray[i].getName() + "\n" + bdArray[i].getAddress();
 		}
-	};
+
+		AlertDialog chooseBluetoothDialog = new AlertDialog.Builder(MainActivity.this)
+				.setTitle("Please select your Google Glass")
+				.setItems(items, new DialogInterface.OnClickListener() {
+					public void onClick(DialogInterface dialog, int which) {
+						// The 'which' argument contains the index position
+						// of the selected item
+						try {
+							mBluetoothSocket = bdArray[which].createRfcommSocketToServiceRecord(UUID.fromString("0f3561b9-bda5-4672-84ff-ab1f98e349b6"));
+							mBluetoothSocket.connect();
+						} catch (Exception e) {
+							Log.v("exception", e.toString());
+							Toast.makeText(MainActivity.this, "please turn on FaceCard on Glass and try again", Toast.LENGTH_SHORT).show();
+							pairToGlass();
+							return;
+						}
+
+						isConnected = true;
+						Log.v("debug", bdArray[which].getName() + which);
+						Toast.makeText(MainActivity.this, "Connection Succeeded!", Toast.LENGTH_SHORT).show();
+
+						//use an AsynTask to detect bt devices nearby and send data to glass periodically
+						new glassCommTask().execute();
+					}
+				})
+				.setNegativeButton("Cancel", null)
+				.setCancelable(false)
+				.create();
+		chooseBluetoothDialog.show();
+	}
 
 	public class glassCommTask extends AsyncTask<Void, Void, Void> {
 		private HashMap<String, BluetoothDevice> btMap2;
@@ -226,7 +202,8 @@ public class MainActivity extends BaseActivity
 
 					//send data to glass
 					ArrayList<FaceCard> bean = new ArrayList<FaceCard>();
-					for (BluetoothDevice device : btMap2.values()) bean.add(new FaceCard(device.getAddress(), "", device.getName(), ""));
+					for (BluetoothDevice device : btMap2.values())
+						bean.add(new FaceCard(device.getAddress(), "", device.getName(), ""));
 					btMap2.clear();
 					Log.v("debug", bean.toString());
 					try {
@@ -240,13 +217,15 @@ public class MainActivity extends BaseActivity
 		};
 
 		@Override
-		protected Void doInBackground(Void ... params) {
+		protected Void doInBackground(Void... params) {
 			// Register the BroadcastReceiver
 			registerReceiver(mReceiver2, new IntentFilter(BluetoothDevice.ACTION_FOUND)); // Don't forget to unregister during onDestroy
 			registerReceiver(mReceiver2, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
 			try {
 				oOutStream = new ObjectOutputStream(mBluetoothSocket.getOutputStream());
-			}catch (Exception e) {Log.v("exception", e.toString());}
+			} catch (Exception e) {
+				Log.v("exception", e.toString());
+			}
 
 			while (true) {
 				//record all bluetooth devices
@@ -259,14 +238,15 @@ public class MainActivity extends BaseActivity
 						Thread.sleep(5 * 1000);
 						if (!mBluetoothAdapter.isDiscovering()) break;
 					}
-				}catch (Exception e) {}
+				} catch (Exception e) {
+				}
 
 				publishProgress();
 			}
 		}
 
 		@Override
-		protected void onProgressUpdate(Void ... progress) {
+		protected void onProgressUpdate(Void... progress) {
 		}
 
 		@Override
@@ -274,17 +254,6 @@ public class MainActivity extends BaseActivity
 			unregisterReceiver(mReceiver2);
 		}
 	}
-
-	@Override
-	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-		if (requestCode == Constants.REQUEST_ENABLE_BT) {
-			if (resultCode == RESULT_OK) {
-				if (!isBtRegistered) 	registerBluetooth();
-				if (!isPaired) pairToGlass();
-			}
-		}
-	}
-
 
 
 //------------------------------------------- bluetooth work ends here ---------------------------------------------------------------------
@@ -465,7 +434,6 @@ public class MainActivity extends BaseActivity
 	protected void onDestroy() {
 		super.onDestroy();
 		mBluetoothAdapter.cancelDiscovery();
-		unregisterReceiver(mReceiver);
 		Log.d(TAG, "onDestroy GoogleApiClient disconnected");
 		if (mGoogleApiClient.isConnected()) {
 			mGoogleApiClient.disconnect();
