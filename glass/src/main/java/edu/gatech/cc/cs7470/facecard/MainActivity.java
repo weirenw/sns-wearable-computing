@@ -1,202 +1,290 @@
 package edu.gatech.cc.cs7470.facecard;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.bluetooth.BluetoothAdapter;
-import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.MotionEvent;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
+import android.widget.TextView;
 
-import com.google.android.glass.app.Card;
-import com.google.android.glass.touchpad.Gesture;
-import com.google.android.glass.touchpad.GestureDetector;
+import com.google.android.glass.widget.CardBuilder;
 import com.google.android.glass.widget.CardScrollAdapter;
 import com.google.android.glass.widget.CardScrollView;
 
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
+import java.util.Timer;
+import java.util.TimerTask;
 import java.util.UUID;
 
-/**
- * Created by miseonpark on 3/11/15.
- */
+import edu.gatech.cc.cs7470.facecard.Model.FaceCard;
+
+
 public class MainActivity extends Activity {
-    private List<Card> mCards;
-    private CardScrollView mCardScrollView;
-    public static final UUID MY_UUID = UUID.fromString("0f3561b9-bda5-4672-84ff-ab1f98e349b6");
-    public BluetoothAdapter mBluetoothAdapter;
-    private Context context = this;
-    Set<BluetoothDevice> devicesArray;
-    ArrayList<BluetoothDevice> devices;
-    IntentFilter filter;
-    String tag = "debugging";
-    BroadcastReceiver mReceiver;
+	private List<CardBuilder> mCards;
+	private CardScrollView mCardScrollView;
+	private FaceCardScrollAdapter mScrollAdapter;
 
-    GestureDetector mGestureDetector;
+	TextView logTextView;
+	AlertDialog connectingDialog;
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.face_card_main);
+	final String connectionUUID = "0f3561b9-bda5-4672-84ff-ab1f98e349b6";
+	final String ExitAppSignal = "EXIT_APP_SIGNAL";
 
-        //initialize an array list of card object, which works the same as the list view..
-        mCards = new ArrayList<Card>();
-        mGestureDetector = this.createGestureDetector(this);
+	private BluetoothSocket mBluetoothSocket;
+	private BluetoothAdapter mBluetoothAdapter;
 
-        initBluetooth();
-        //check the bluetooth
-        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
-        if (mBluetoothAdapter == null) {
-            // Device does not support Bluetooth
-            Toast toast = Toast.makeText(context, "Bluetooth disabled", Toast.LENGTH_SHORT);
-            toast.show();
-            finish();
-        }
-        else
-        {
-            if (!mBluetoothAdapter.isEnabled()) {
+	Timer timerRefresh = new Timer();  // timer to periodically refresh data
+	long REFRESH_TIME = 10 * 1000; //time to wait until next refresh, this is not the accurate time because read() blocks until it reads data from phone
 
-                Toast toast = Toast.makeText(context, "please turn on your Bluetooth ", Toast.LENGTH_SHORT);
-                toast.show();
-                //push to the setting view to enable the bluetooth
-                Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, 1);
-            }
-            Set<BluetoothDevice> devicesArray = mBluetoothAdapter.getBondedDevices();
-            // If there are devices
-            if (devicesArray != null && devicesArray.size() > 0) {
-                // Loop through paired devices
-                Toast toast = Toast.makeText(context, "Bluetooth founded!", Toast.LENGTH_SHORT);
-                toast.show();
-                for (BluetoothDevice device : devicesArray) {
-                    //add the name of each device to each card
-                    Card card = new Card(this);
-                    card.setText(device.getName());
-                    //add the card to the array list
-                    mCards.add(card);
-                    devices.add(device);
-                }
-                setupScrollView();
-            }
-        }
-    }
+	TimerTask timerTaskRefresh = new TimerTask() {
+		@Override
+		public void run() {
+			new phoneCommTask().execute();
+		}
+	};
 
-    private void setupScrollView(){
-        mCardScrollView = new CardScrollView(this){
-            @Override
-            public final boolean dispatchGenericFocusedEvent(MotionEvent event) {
-                if (mGestureDetector.onMotionEvent(event)) {
-                    return true;
-                }
-                return super.dispatchGenericFocusedEvent(event);
-            }
-        };
+	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+		public void onReceive(Context context, Intent intent) {
+			String action = intent.getAction();
+			if (action.equals(ExitAppSignal)) finish();
+		}
+	};
 
-        ExampleCardScrollAdapter adapter = new ExampleCardScrollAdapter();
-        mCardScrollView.setAdapter(adapter);
-        mCardScrollView.activate();
-        setContentView(mCardScrollView);
+	@Override
+	protected void onCreate(Bundle savedInstanceState) {
+		super.onCreate(savedInstanceState);
+		setContentView(R.layout.activity_main);
 
-        mBluetoothAdapter.cancelDiscovery();
-        mBluetoothAdapter.startDiscovery();
-    }
+		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+		logTextView = (TextView)findViewById(R.id.logTextView);
 
-    private  void initBluetooth(){
-        devices = new ArrayList<BluetoothDevice>();
-        // Create a BroadcastReceiver for ACTION_FOUND
-        mReceiver = new BroadcastReceiver() {
-            //once the receiver receives an action, it will break and stop receiving notifications.
-            public void onReceive(Context context, Intent intent) {
-                String action = intent.getAction();
-                // When discovery finds a device
-                if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    // Get the BluetoothDevice object from the Intent
-                    BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+		IntentFilter filter = new IntentFilter();
+		filter.addAction(ExitAppSignal);
+		registerReceiver(mReceiver, filter);
+	}
 
-                    Card card = new Card(getApplicationContext());
-                    card.setText(device.getName());
-                    mCards.add(card);
-                    devices.add(device);
-                    //pairedDevices.add(device.getName());
-                }
-            }
-        };
-        // Register the BroadcastReceiver
-        filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
-        registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
-        filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_STARTED);
-        registerReceiver(mReceiver, filter);
-        filter = new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED);
-        registerReceiver(mReceiver, filter);
-        filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
-        registerReceiver(mReceiver, filter);
-    }
+	@Override
+	public void onResume() {
+		super.onResume();
+		checkConnection();
+	}
 
-    private GestureDetector createGestureDetector(final Context context) {
+	//this is a block function, it waits until connect with a phone (or get an exception)
+	private void checkConnection() {
+		if (mBluetoothSocket != null && mBluetoothSocket.isConnected()) return;
+		String message =  "Waiting for connection...\n Glass Name: " + mBluetoothAdapter.getName() + "  \nGlass Address: " + mBluetoothAdapter.getAddress();
+		connectingDialog = new AlertDialog.Builder(this).setMessage(message).setCancelable(false).create();
+		connectingDialog.show();
+		new connectTask().execute();
+	}
 
-        GestureDetector mGestureDetector = new GestureDetector(context);
-        mGestureDetector.setBaseListener(new GestureDetector.BaseListener() {
+	private class connectTask extends AsyncTask<Void, Void, Void> {
+		@Override
+		protected Void doInBackground(Void ... params) {
+			try {
+				BluetoothServerSocket mServerSocket = mBluetoothAdapter.listenUsingRfcommWithServiceRecord("MyConnection", UUID.fromString(connectionUUID));
+				mBluetoothSocket = mServerSocket.accept();
+				Log.v("debug", "connected!");
+				connectingDialog.cancel();
+				//timer periodically run phoneCommTask to update face cards
+				timerRefresh.schedule(timerTaskRefresh, 0, REFRESH_TIME);
+			} catch (Exception e) {
+				Log.v("exception", e.toString());
+				MainActivity.this.finish();
+			}
+			return null;
+		}
+	}
 
-            @Override
-            public boolean onGesture(Gesture gesture) {
-                if (gesture == Gesture.TAP) {
-                    // do something on tap
-                    int index = mCardScrollView.getSelectedItemPosition();
-                    Log.d(tag, Integer.toString(index));
+	private class phoneCommTask extends AsyncTask<Void, ArrayList<FaceCard>, Void> {
+		@Override
+		protected Void doInBackground(Void ... params) {
+			// Register the BroadcastReceiver
+			try {
+				ObjectInputStream oInStream = new ObjectInputStream(mBluetoothSocket.getInputStream());
+				ArrayList<FaceCard> bean = (ArrayList<FaceCard>) oInStream.readObject();
+				/*String output = "";
+				for (FaceCard fc : bean) output += fc.getName() + " " + fc.getBluetoothId() + "\n";
+				publishProgress(output+"\n");*/
+				publishProgress(bean);
+			} catch (Exception e) {
+				//data might be corrupted
+				Log.v("exception", e.toString());
+			}
+			return null;
+		}
 
-                    if(mBluetoothAdapter.isDiscovering()){
-                        mBluetoothAdapter.cancelDiscovery();
-                    }
-                    BluetoothDevice selectedDevice = devices.get(index);
-//                    ConnectThread connect = new ConnectThread(selectedDevice);
-//                    connect.start();
-                    Log.i(tag, "clicked");
-                    return true;
-                }
-                return false;
-            }
-        });
-        return mGestureDetector;
-    }
+		@Override
+		protected void onProgressUpdate(ArrayList<FaceCard> ... progress) {
+			ArrayList<FaceCard> bean = progress[0];
+			Log.v("debug", "receive object: " + bean.toString());
+			for (FaceCard fc : bean) logTextView.append("\n" + fc.getName() + " " + fc.getBluetoothId() + "\n");
 
-    private class ExampleCardScrollAdapter extends CardScrollAdapter {
-        //the same as implementing a list view
+			//update face cards
+			createCards(bean);
 
-        public int findIdPosition(Object id) {
-            return -1;
-        }
+			mCardScrollView = new CardScrollView(MainActivity.this);
+			mScrollAdapter = new FaceCardScrollAdapter();
+			mCardScrollView.setAdapter(mScrollAdapter);
+			mCardScrollView.activate();
+			setContentView(mCardScrollView);
+		}
+	}
 
-        public int findItemPosition(Object item) {
-            return mCards.indexOf(item);
-        }
+	private void createCards(ArrayList<FaceCard> bean) {
+		mCards = new ArrayList<CardBuilder>();
+		for (FaceCard fc : bean) {
+			mCards.add(new CardBuilder(this, CardBuilder.Layout.TEXT)
+					.setText(fc.getName() + " " + fc.getBluetoothId())
+					.setFootnote("I'm the footer!"));
+		}
+	}
 
-        @Override
-        public int getCount() {
-            return mCards.size();
-        }
+	private class FaceCardScrollAdapter extends CardScrollAdapter {
 
-        @Override
-        public Object getItem(int position) {
-            return mCards.get(position);
-        }
+		@Override
+		public int getPosition(Object item) {
+			return mCards.indexOf(item);
+		}
 
-        @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            return mCards.get(position).getView();
-        }
+		@Override
+		public int getCount() {
+			return mCards.size();
+		}
 
-        @Override
-        public int getPosition(Object arg0) {
-            // TODO Auto-generated method stub
-            return 0;
-        }
-    }
+		@Override
+		public Object getItem(int position) {
+			return mCards.get(position);
+		}
+
+		@Override
+		public int getViewTypeCount() {
+			return CardBuilder.getViewTypeCount();
+		}
+
+		@Override
+		public int getItemViewType(int position){
+			return mCards.get(position).getItemViewType();
+		}
+
+		@Override
+		public View getView(int position, View convertView, ViewGroup parent) {
+			return mCards.get(position).getView(convertView, parent);
+		}
+	}
+
+	@Override
+	public void onDestroy() {
+		try {
+			if (mBluetoothSocket != null) mBluetoothSocket.close();
+		}catch (Exception e) { Log.v("exception", e.toString());}
+		super.onDestroy();
+	}
+
+		/*
+	protected void onCreate(Bundle savedInstanceState) {
+		mPointsGenerator = new Random();
+
+		if (mLiveCard == null) {
+
+			// Get an instance of a live card
+			mLiveCard = new LiveCard(this, LIVE_CARD_TAG);
+
+			// Inflate a layout into a remote view
+			mLiveCardView = new RemoteViews(getPackageName(),
+					R.layout.live_card);
+
+			// Set up initial RemoteViews values
+			homeScore = 0;
+			awayScore = 0;
+			mLiveCardView.setTextViewText(R.id.home_team_name_text_view, "home team");
+			mLiveCardView.setTextViewText(R.id.away_team_name_text_view, "away team");
+			mLiveCardView.setTextViewText(R.id.footer_text, "game quarter");
+
+			// Set up the live card's action with a pending intent
+			// to show a menu when tapped
+			Intent menuIntent = new Intent(this, LiveCardMenuActivity.class);
+			menuIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK |
+					Intent.FLAG_ACTIVITY_CLEAR_TASK);
+			mLiveCard.setAction(PendingIntent.getActivity(
+					this, 0, menuIntent, 0));
+
+			// Publish the live card
+			mLiveCard.publish(LiveCard.PublishMode.REVEAL);
+
+			// Queue the update text runnable
+			mHandler.post(mUpdateLiveCardRunnable);
+		}
+	}*/
+
+	/**
+	 * Runnable that updates live card contents
+	 */
+	/*private class UpdateLiveCardRunnable implements Runnable{
+
+		private boolean mIsStopped = false;
+
+		public void run(){
+			if(!isStopped()){
+				// Generate fake points.
+				homeScore += mPointsGenerator.nextInt(3);
+				awayScore += mPointsGenerator.nextInt(3);
+
+				// Update the remote view with the new scores.
+				mLiveCardView.setTextViewText(R.id.home_score_text_view,
+						String.valueOf(homeScore));
+				mLiveCardView.setTextViewText(R.id.away_score_text_view,
+						String.valueOf(awayScore));
+
+				// Always call setViews() to update the live card's RemoteViews.
+				mLiveCard.setViews(mLiveCardView);
+
+				// Queue another score update in 30 seconds.
+				mHandler.postDelayed(mUpdateLiveCardRunnable, DELAY_MILLIS);
+			}
+		}
+
+		public boolean isStopped() {
+			return mIsStopped;
+		}
+
+		public void setStop(boolean isStopped) {
+			this.mIsStopped = isStopped;
+		}
+	}*/
+
+	@Override
+	public boolean onCreateOptionsMenu(Menu menu) {
+		// Inflate the menu; this adds items to the action bar if it is present.
+		getMenuInflater().inflate(R.menu.menu_, menu);
+		return true;
+	}
+
+	@Override
+	public boolean onOptionsItemSelected(MenuItem item) {
+		// Handle action bar item clicks here. The action bar will
+		// automatically handle clicks on the Home/Up button, so long
+		// as you specify a parent activity in AndroidManifest.xml.
+		int id = item.getItemId();
+
+		//noinspection SimplifiableIfStatement
+		if (id == R.id.action_settings) {
+			return true;
+		}
+
+		return super.onOptionsItemSelected(item);
+	}
 }

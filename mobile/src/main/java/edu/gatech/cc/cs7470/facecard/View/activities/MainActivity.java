@@ -41,7 +41,7 @@ import edu.gatech.cc.cs7470.facecard.View.fragments.NavigationDrawerFragment;
 
 public class MainActivity extends BaseActivity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks {
-
+	final String connectionUUID = "0f3561b9-bda5-4672-84ff-ab1f98e349b6";
     private static final String TAG = "FaceCard MainActivity";
 
     /**
@@ -160,7 +160,7 @@ public class MainActivity extends BaseActivity
 						// The 'which' argument contains the index position
 						// of the selected item
 						try {
-							mBluetoothSocket = bdArray[which].createRfcommSocketToServiceRecord(UUID.fromString("0f3561b9-bda5-4672-84ff-ab1f98e349b6"));
+							mBluetoothSocket = bdArray[which].createRfcommSocketToServiceRecord(UUID.fromString(connectionUUID));
 							mBluetoothSocket.connect();
 						} catch (Exception e) {
 							Log.v("exception", e.toString());
