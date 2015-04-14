@@ -1,4 +1,4 @@
-package edu.gatech.cc.cs7470.facecard.Model;
+package edu.gatech.cc.cs7470.facecard.View.activities.Model;
 
 import com.google.android.gms.plus.model.people.Person;
 

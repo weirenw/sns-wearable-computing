@@ -4,9 +4,6 @@ package edu.gatech.cc.cs7470.facecard.View.fragments;
  * Created by miseonpark on 3/23/15.
  */
 
-import android.app.AlertDialog;
-import android.content.DialogInterface;
-import android.content.SharedPreferences;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
@@ -28,8 +25,7 @@ import com.google.android.gms.plus.Plus;
 import java.io.InputStream;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
-import edu.gatech.cc.cs7470.facecard.Controller.utils.BluetoothUtil;
-import edu.gatech.cc.cs7470.facecard.Model.Profile;
+import edu.gatech.cc.cs7470.facecard.View.activities.Model.Profile;
 import edu.gatech.cc.cs7470.facecard.R;
 import edu.gatech.cc.cs7470.facecard.View.activities.MainActivity;
 import edu.gatech.cc.cs7470.facecard.View.uihelpers.RoundImageHelper;

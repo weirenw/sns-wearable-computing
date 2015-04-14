@@ -9,6 +9,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.os.Parcelable;
 import android.support.v7.app.ActionBar;
 import android.support.v4.app.FragmentManager;
 import android.os.Bundle;
@@ -18,13 +19,16 @@ import android.view.MenuItem;
 import android.support.v4.widget.DrawerLayout;
 
 import com.google.android.gms.plus.Plus;
-import com.google.android.gms.plus.model.people.Person;
+
+import java.util.ArrayList;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
+import edu.gatech.cc.cs7470.facecard.Controller.tasks.GetRecommendedUsersInfo;
 import edu.gatech.cc.cs7470.facecard.Controller.tasks.RegisterBluetoothTask;
 import edu.gatech.cc.cs7470.facecard.Controller.utils.BluetoothUtil;
-import edu.gatech.cc.cs7470.facecard.Model.Bluetooth;
-import edu.gatech.cc.cs7470.facecard.Model.Profile;
+import edu.gatech.cc.cs7470.facecard.View.activities.Model.Bluetooth;
+import edu.gatech.cc.cs7470.facecard.View.activities.Model.FaceCard;
+import edu.gatech.cc.cs7470.facecard.View.activities.Model.Profile;
 import edu.gatech.cc.cs7470.facecard.R;
 import edu.gatech.cc.cs7470.facecard.View.fragments.FriendListFragment;
 import edu.gatech.cc.cs7470.facecard.View.fragments.MainFragment;
@@ -39,7 +43,9 @@ public class MainActivity extends BaseActivity
      * Fragment
      */
     private NavigationDrawerFragment mNavigationDrawerFragment;
-
+    private BroadcastReceiver mReceiver;
+    private BluetoothAdapter mBluetoothAdapter;
+    private ArrayList<String> discoveredBluetoothMACs = new ArrayList<String>();
     /**
      * Used to store the last screen title. For use in {@link #restoreActionBar()}.
      */
@@ -47,8 +53,9 @@ public class MainActivity extends BaseActivity
 
     private int currentNavigationFragment;
 
-    private Profile profile;
-
+    private Profile mProfile;
+    private ArrayList<FaceCard> discoveredFacecards = new ArrayList<FaceCard>(); //!!!!!!! the discovered facecards are stored here !!!!!!!!!! Qiang this is what you need
+    
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -59,13 +66,14 @@ public class MainActivity extends BaseActivity
         currentNavigationFragment = 0;
 
         if (mGoogleApiClient.isConnected() && Plus.PeopleApi.getCurrentPerson(mGoogleApiClient) != null) {
-            profile = new Profile(Plus.PeopleApi.getCurrentPerson(mGoogleApiClient),
+            mProfile = new Profile(Plus.PeopleApi.getCurrentPerson(mGoogleApiClient),
                     Plus.AccountApi.getAccountName(mGoogleApiClient));
+
         }
 
-        BluetoothAdapter mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
+        mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (mBluetoothAdapter == null) {
-            Log.d("","device does not support bluetooth");
+            Log.d(TAG,"device does not support bluetooth");
         }
         if (!mBluetoothAdapter.isEnabled()) {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
@@ -86,21 +94,32 @@ public class MainActivity extends BaseActivity
             getSupportFragmentManager().beginTransaction()
                     .add(R.id.container, new MainFragment()).commit();
         }
-
-        final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        discoveredBluetoothMACs.add(mBluetoothAdapter.getAddress()); //adding source address as element 0
+        mReceiver = new BroadcastReceiver() {
             public void onReceive(Context context, Intent intent) {
                 String action = intent.getAction();
                 // When discovery finds a device
+
                 if (BluetoothDevice.ACTION_FOUND.equals(action)) {
-                    // Get the BluetoothDevice object from the Intent
+                    // Get the BluetoothDevice object from the Intent                    BluetoothDevice device  = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
                     BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
-                    Log.d(TAG, "device found, name = " + device.getName() + ", bluetooth id = " + device.getAddress());
+                    discoveredBluetoothMACs.add(device.getAddress());   //adding target addresses as elements 1 through n
+                    Log.d(TAG, "Device found, device name is: " + device.getName() + ", Mac address is: " + device.getAddress());
                 }
+                if(mBluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)){
+                    Log.d(TAG,"discovery finished, sending the following info to getrecommendedusersinfo");
+                    for(String i:discoveredBluetoothMACs){
+                        Log.d(TAG,i);
+                    }
+                    new GetRecommendedUsersInfo(MainActivity.this).execute(discoveredBluetoothMACs);
+
+                }
+
             }
         };
         IntentFilter filter = new IntentFilter(BluetoothDevice.ACTION_FOUND);
+        filter.addAction(mBluetoothAdapter.ACTION_DISCOVERY_FINISHED);
         registerReceiver(mReceiver, filter); // Don't forget to unregister during onDestroy
-
 //        tv_profile_description = (TextView)findViewById(R.id.profile_description);
 //        tv_profile_organization = (TextView)findViewById(R.id.profile_organization);
 //        iv_profile_picture = (ImageView)findViewById(R.id.profile_picture);
@@ -213,6 +232,7 @@ public class MainActivity extends BaseActivity
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+
         // Handle action bar item clicks here. The action bar will
         // automatically handle clicks on the Home/Up button, so long
         // as you specify a parent activity in AndroidManifest.xml.
@@ -227,28 +247,29 @@ public class MainActivity extends BaseActivity
     }
 
     public Profile getProfile(){
-        return this.profile;
+        return this.mProfile;
     }
 
     private void registerBluetooth(){
 
-        final String mEmail=profile.getEmail();
-        final String uuid = (new BluetoothUtil()).getBluetoothId();
-        final String mName = profile.getName();
-        final String mTagline = profile.getTagline();
-        profile.setBluetoothInfo(new Bluetooth(uuid,mEmail));
-        final String mBluetoothID = profile.getBluetoothInfo().getBluetoothId();
+        final String mEmail=mProfile.getEmail();
+        final String mName = mProfile.getName();
+        final String mTagline = mProfile.getTagline();
 
 
 
         AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setTitle("Bluetooth Registration");
-        builder.setMessage("You have to register your Bluetooth device to use the application.\n" + uuid);
+        builder.setMessage("You have to register your Bluetooth device to use the application.\n");
         //Yes
         builder.setPositiveButton("Register", new DialogInterface.OnClickListener() {
             @Override
             public void onClick(DialogInterface dialog, int which) {
-
+                String uuid = (new BluetoothUtil()).getBluetoothId();
+                String macAddress = mBluetoothAdapter.getAddress();
+                mProfile.setBluetoothInfo(new Bluetooth(macAddress, mEmail));
+                final String mBluetoothID = mProfile.getBluetoothInfo().getBluetoothId();
+                Log.d(TAG,"Bluetooth id of user's device is " + mBluetoothID);
                 new RegisterBluetoothTask().execute(mEmail,mBluetoothID, mName, mTagline);
 
                 //save
@@ -275,9 +296,26 @@ public class MainActivity extends BaseActivity
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (mBluetoothAdapter != null) {
+            mBluetoothAdapter.cancelDiscovery();
+        }
+        unregisterReceiver(mReceiver);
+
         Log.d(TAG, "onDestroy GoogleApiClient disconnected");
         if (mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
+        }
+    }
+
+
+    public void recommenderCallBack(ArrayList<FaceCard> facecards){
+        discoveredFacecards = facecards;
+        for(FaceCard i : discoveredFacecards){
+            Log.d(TAG,"bluetoothId " + i.getBluetoothId());
+            Log.d(TAG,"accountId/email " + i.getAccountId());
+            Log.d(TAG,"major " + i.getMajor());
+            Log.d(TAG,"name " + i.getName());
+            Log.d(TAG,"tag " + i.getTag());
         }
     }
 

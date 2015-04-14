@@ -1,17 +1,18 @@
-package edu.gatech.cc.cs7470.facecard.Model;
+package edu.gatech.cc.cs7470.facecard.View.activities.Model;
 
 /**
  * Created by miseonpark on 3/24/15.
  */
 public class FaceCard {
 
-    private String bluetoothId, accountId, name, tag;
+    private String bluetoothId, email, major, name, tag;
 
-    public FaceCard(String bluetoothId, String accountId, String name, String tag){
+    public FaceCard(String bluetoothId, String email, String major, String name, String tag){
         this.bluetoothId = bluetoothId;
-        this.accountId = accountId;
+        this.email = email;
         this.name = name;
         this.tag = tag;
+        this.major=major;
     }
 
     public String getBluetoothId() {
@@ -23,11 +24,11 @@ public class FaceCard {
     }
 
     public String getAccountId() {
-        return accountId;
+        return email;
     }
 
     public void setAccountId(String accountId) {
-        this.accountId = accountId;
+        this.email = accountId;
     }
 
     public String getName() {
@@ -44,5 +45,13 @@ public class FaceCard {
 
     public void setTag(String tag) {
         this.tag = tag;
+    }
+
+    public String getMajor() {
+        return major;
+    }
+
+    public void setMajor(String major) {
+        this.major = major;
     }
 }

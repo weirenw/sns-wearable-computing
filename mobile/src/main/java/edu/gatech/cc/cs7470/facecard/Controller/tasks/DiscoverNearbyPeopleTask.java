@@ -16,7 +16,7 @@ import java.io.InputStreamReader;
 import java.util.ArrayList;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
-import edu.gatech.cc.cs7470.facecard.Model.FaceCard;
+import edu.gatech.cc.cs7470.facecard.View.activities.Model.FaceCard;
 
 /**
  * Created by miseonpark on 3/24/15.
@@ -74,7 +74,7 @@ public class DiscoverNearbyPeopleTask extends AsyncTask<ArrayList<String>, Strin
                         break;
                     case 4:
                         tag = bufferedStrChunk;
-                        faceCard = new FaceCard(bluetoothId, accountId, name, tag);
+                //        faceCard = new FaceCard(bluetoothId, accountId, name, tag);
                         break;
                     default:
                         break;

@@ -39,7 +39,7 @@ public class RegisterBluetoothTask extends AsyncTask<String, String, String> {
         String tag = params[3];
 
         //create string
-        String rest = "?bluetooth_id=" + bluetoothId + "&google_account=" + accountId
+        String rest = "setAccount.php?bluetooth_id=" + bluetoothId + "&google_account=" + accountId
                 + "&google_password=" + "pwd" + "&name=" +  name + "&personal_tags=" + tag;
 
         rest = rest.replace(" ", "%20");

@@ -1,4 +1,4 @@
-package edu.gatech.cc.cs7470.facecard.Model;
+package edu.gatech.cc.cs7470.facecard.View.activities.Model;
 
 /**
  * Created by miseonpark on 3/9/15.
