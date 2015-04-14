@@ -85,7 +85,7 @@ public class MainActivity extends Activity {
 	//this is a block function, it waits until connect with a phone (or get an exception)
 	private void checkConnection() {
 		if (bluetoothConnected) return;
-		String message =  "Waiting for connection...\n Name: " + mBluetoothAdapter.getName() + "  \nAddress: " + mBluetoothAdapter.getAddress();
+		String message =  "Waiting for connection...\nThis Device Info:\nName: " + mBluetoothAdapter.getName() + "  \nAddress: " + mBluetoothAdapter.getAddress();
 		connectingDialog = new AlertDialog.Builder(this).setMessage(message).setCancelable(false).create();
 		connectingDialog.show();
 		new connectTask().execute();
@@ -156,8 +156,8 @@ public class MainActivity extends Activity {
 		mCards = new ArrayList<CardBuilder>();
 		for (FaceCard fc : bean) {
 			mCards.add(new CardBuilder(this, CardBuilder.Layout.TEXT)
-					.setText(fc.getName() + "\n\nTags: " + fc.getTag() + "\nAccount: " + fc.getAccountId())
-					.setFootnote(fc.getBluetoothId())
+					.setText(fc.getName() + "\n\nTags: " + fc.getTag() + "\nMajor: " + fc.getMajor())
+					.setFootnote(fc.getAccountId())
 					.setTimestamp("just now"));
 		}
 	}

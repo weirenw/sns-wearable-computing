@@ -59,6 +59,7 @@ public class DiscoverNearbyPeopleTask extends AsyncTask<ArrayList<String>, Strin
             String accountId="";
             String name="";
             String tag="";
+	        String major="";
 
             int counter = 0;
             while((bufferedStrChunk = bufferedReader.readLine()) != null){
@@ -74,7 +75,7 @@ public class DiscoverNearbyPeopleTask extends AsyncTask<ArrayList<String>, Strin
                         break;
                     case 4:
                         tag = bufferedStrChunk;
-                        faceCard = new FaceCard(bluetoothId, accountId, name, tag);
+                        faceCard = new FaceCard(bluetoothId, accountId, name, tag, major);
                         break;
                     default:
                         break;

@@ -228,7 +228,7 @@ public class MainActivity extends BaseActivity
 			for (int i = 0; i < ja.length(); i++) {
 				JSONObject profile = ja.getJSONObject(i);
 				bean.add(new FaceCard(profile.getString("bluetooth_id"), profile.getString("google_account"),
-						profile.getString("name"), profile.getString("personal_tags")));
+						profile.getString("name"), profile.getString("personal_tags"), profile.getString("major")));
 			}
 			return bean;
 		}catch (Exception e) {

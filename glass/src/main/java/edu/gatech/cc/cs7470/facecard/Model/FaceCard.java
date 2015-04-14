@@ -8,14 +8,23 @@ import java.io.Serializable;
 public class FaceCard implements Serializable {
 	private static final long serialVersionUID = 103701L;
 
-    private String bluetoothId, accountId, name, tag;
+    private String bluetoothId, accountId, name, tag, major;
 
-    public FaceCard(String bluetoothId, String accountId, String name, String tag){
+    public FaceCard(String bluetoothId, String accountId, String name, String tag, String major){
         this.bluetoothId = bluetoothId;
         this.accountId = accountId;
         this.name = name;
         this.tag = tag;
+	    this.major = major;
     }
+
+	public String getMajor() {
+		return major;
+	}
+
+	public void setMajor(String major) {
+		this.major = major;
+	}
 
     public String getBluetoothId() {
         return bluetoothId;
