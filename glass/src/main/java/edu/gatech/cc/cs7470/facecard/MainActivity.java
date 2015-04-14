@@ -25,8 +25,6 @@ import com.google.android.glass.widget.CardScrollView;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Timer;
-import java.util.TimerTask;
 import java.util.UUID;
 
 import edu.gatech.cc.cs7470.facecard.Model.FaceCard;
@@ -43,18 +41,20 @@ public class MainActivity extends Activity {
 	final String connectionUUID = "0f3561b9-bda5-4672-84ff-ab1f98e349b6";
 	final String ExitAppSignal = "EXIT_APP_SIGNAL";
 
-	private BluetoothSocket mBluetoothSocket;
+	private BluetoothServerSocket mServerSocket;
 	private BluetoothAdapter mBluetoothAdapter;
+	private ObjectInputStream oInStream;
+	private boolean bluetoothConnected = false;
 
-	Timer timerRefresh = new Timer();  // timer to periodically refresh data
-	long REFRESH_TIME = 10 * 1000; //time to wait until next refresh, this is not the accurate time because read() blocks until it reads data from phone
+	/*Timer timerRefresh = new Timer();  // timer to periodically refresh data
+	long REFRESH_TIME = 30 * 1000; //time to wait until next refresh, this is not the accurate time because read() blocks until it reads data from phone
 
 	TimerTask timerTaskRefresh = new TimerTask() {
 		@Override
 		public void run() {
 			new phoneCommTask().execute();
 		}
-	};
+	};*/
 
 	private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
 		public void onReceive(Context context, Intent intent) {
@@ -84,8 +84,8 @@ public class MainActivity extends Activity {
 
 	//this is a block function, it waits until connect with a phone (or get an exception)
 	private void checkConnection() {
-		if (mBluetoothSocket != null && mBluetoothSocket.isConnected()) return;
-		String message =  "Waiting for connection...\n Glass Name: " + mBluetoothAdapter.getName() + "  \nGlass Address: " + mBluetoothAdapter.getAddress();
+		if (bluetoothConnected) return;
+		String message =  "Waiting for connection...\n Name: " + mBluetoothAdapter.getName() + "  \nAddress: " + mBluetoothAdapter.getAddress();
 		connectingDialog = new AlertDialog.Builder(this).setMessage(message).setCancelable(false).create();
 		connectingDialog.show();
 		new connectTask().execute();
@@ -95,12 +95,15 @@ public class MainActivity extends Activity {
 		@Override
 		protected Void doInBackground(Void ... params) {
 			try {
-				BluetoothServerSocket mServerSocket = mBluetoothAdapter.listenUsingRfcommWithServiceRecord("MyConnection", UUID.fromString(connectionUUID));
-				mBluetoothSocket = mServerSocket.accept();
+				mServerSocket = mBluetoothAdapter.listenUsingRfcommWithServiceRecord("MyConnection", UUID.fromString(connectionUUID));
+				BluetoothSocket mBluetoothSocket = mServerSocket.accept();
 				Log.v("debug", "connected!");
 				connectingDialog.cancel();
 				//timer periodically run phoneCommTask to update face cards
-				timerRefresh.schedule(timerTaskRefresh, 0, REFRESH_TIME);
+				//timerRefresh.schedule(timerTaskRefresh, 0, REFRESH_TIME);
+				bluetoothConnected = true;
+				oInStream = new ObjectInputStream(mBluetoothSocket.getInputStream());
+				new phoneCommTask().execute();
 			} catch (Exception e) {
 				Log.v("exception", e.toString());
 				MainActivity.this.finish();
@@ -109,38 +112,43 @@ public class MainActivity extends Activity {
 		}
 	}
 
-	private class phoneCommTask extends AsyncTask<Void, ArrayList<FaceCard>, Void> {
+	private class phoneCommTask extends AsyncTask<Void, Void, Boolean> {
+		ArrayList<FaceCard> bean;
 		@Override
-		protected Void doInBackground(Void ... params) {
+		protected Boolean doInBackground(Void ... params) {
 			// Register the BroadcastReceiver
 			try {
-				ObjectInputStream oInStream = new ObjectInputStream(mBluetoothSocket.getInputStream());
-				ArrayList<FaceCard> bean = (ArrayList<FaceCard>) oInStream.readObject();
+				bean = (ArrayList<FaceCard>) oInStream.readObject();
 				/*String output = "";
 				for (FaceCard fc : bean) output += fc.getName() + " " + fc.getBluetoothId() + "\n";
 				publishProgress(output+"\n");*/
-				publishProgress(bean);
+				return new Boolean(true);
 			} catch (Exception e) {
 				//data might be corrupted
 				Log.v("exception", e.toString());
+				return new Boolean(false);
 			}
-			return null;
 		}
 
 		@Override
-		protected void onProgressUpdate(ArrayList<FaceCard> ... progress) {
-			ArrayList<FaceCard> bean = progress[0];
-			Log.v("debug", "receive object: " + bean.toString());
-			for (FaceCard fc : bean) logTextView.append("\n" + fc.getName() + " " + fc.getBluetoothId() + "\n");
-
-			//update face cards
-			createCards(bean);
-
-			mCardScrollView = new CardScrollView(MainActivity.this);
-			mScrollAdapter = new FaceCardScrollAdapter();
-			mCardScrollView.setAdapter(mScrollAdapter);
-			mCardScrollView.activate();
-			setContentView(mCardScrollView);
+		protected void onPostExecute(Boolean result) {
+			boolean status = result.booleanValue();
+			if (status) {
+				Log.v("debug", "receive object: " + bean.toString());
+				//for (FaceCard fc : bean) logTextView.append("\n" + fc.getName() + " " + fc.getBluetoothId() + "\n");
+				//update face cards
+				createCards(bean);
+				mCardScrollView = new CardScrollView(MainActivity.this);
+				mScrollAdapter = new FaceCardScrollAdapter();
+				mCardScrollView.setAdapter(mScrollAdapter);
+				mCardScrollView.activate();
+				setContentView(mCardScrollView);
+				new phoneCommTask().execute();
+			}else {  //connection disrupted,reconnect
+				bluetoothConnected = false;
+				try {mServerSocket.close();} catch(Exception e) {Log.v("exception", e.toString());}
+				checkConnection();
+			}
 		}
 	}
 
@@ -189,7 +197,8 @@ public class MainActivity extends Activity {
 	@Override
 	public void onDestroy() {
 		try {
-			if (mBluetoothSocket != null) mBluetoothSocket.close();
+			oInStream.close();
+			mServerSocket.close();
 		}catch (Exception e) { Log.v("exception", e.toString());}
 		super.onDestroy();
 	}
