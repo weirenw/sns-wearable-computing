@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.StrictMode;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
 import android.support.v7.app.ActionBar;
@@ -22,8 +23,17 @@ import android.widget.Toast;
 
 import com.google.android.gms.plus.Plus;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
+
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.ObjectOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLEncoder;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.UUID;
 
@@ -177,6 +187,56 @@ public class MainActivity extends BaseActivity
 		chooseBluetoothDialog.show();
 	}
 
+	private String sendHttpRequest(String url) {
+		StrictMode.ThreadPolicy tp = StrictMode.ThreadPolicy.LAX;
+		StrictMode.setThreadPolicy(tp);
+		try {
+			URL obj = new URL(url);
+			HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+			int responseCode = con.getResponseCode();
+			//read response
+			BufferedReader in = new BufferedReader(
+					new InputStreamReader(con.getInputStream()));
+			String inputLine;
+			StringBuffer response = new StringBuffer();
+			while ((inputLine = in.readLine()) != null) {
+				response.append(inputLine);
+			}
+			in.close();
+			return response.toString();
+		}catch (Exception e) {
+			Log.v("exception", e.toString());
+			return "";
+		}
+	}
+
+	private ArrayList<FaceCard> askBackendForBean(Collection<BluetoothDevice> btDevices) {  //this is a block function, it waits until receive response of http request
+		ArrayList<FaceCard> bean = new ArrayList<FaceCard>();
+		try {
+			StringBuffer sb = new StringBuffer();
+			for (BluetoothDevice device : btDevices)
+				sb.append(device.getAddress() + ",");
+			sb.deleteCharAt(sb.length()-1);
+			//send http request
+			String url = "http://54.68.110.119/facecard/recommender.php?source=" + URLEncoder.encode(mBluetoothAdapter.getAddress(),"UTF-8")
+					+ "&target=" + URLEncoder.encode(sb.toString(),"UTF-8");
+			String response = sendHttpRequest(url);
+
+			//generate bean
+			JSONObject jo = new JSONObject(response.toString());
+			JSONArray ja = jo.getJSONArray("target_list");
+			for (int i = 0; i < ja.length(); i++) {
+				JSONObject profile = ja.getJSONObject(i);
+				bean.add(new FaceCard(profile.getString("bluetooth_id"), profile.getString("google_account"),
+						profile.getString("name"), profile.getString("personal_tags")));
+			}
+			return bean;
+		}catch (Exception e) {
+			Log.v("exception", e.toString());
+			return bean;
+		}
+	}
+
 	public class glassCommTask extends AsyncTask<Void, Void, Void> {
 		private HashMap<String, BluetoothDevice> btMap2;
 		private final BroadcastReceiver mReceiver2 = new BroadcastReceiver() {
@@ -194,9 +254,7 @@ public class MainActivity extends BaseActivity
 					//request backend for data here
 
 					//send data to glass
-					ArrayList<FaceCard> bean = new ArrayList<FaceCard>();
-					for (BluetoothDevice device : btMap2.values())
-						bean.add(new FaceCard(device.getAddress(), "wegnahz", device.getName(), "gt"));
+					ArrayList<FaceCard> bean = askBackendForBean(btMap2.values());
 					btMap2.clear();
 					Log.v("debug", bean.toString());
 					try {
@@ -424,7 +482,6 @@ public class MainActivity extends BaseActivity
 
 	@Override
 	protected void onDestroy() {
-		super.onDestroy();
 		mBluetoothAdapter.cancelDiscovery();
 		Log.d(TAG, "onDestroy GoogleApiClient disconnected");
 		if (mGoogleApiClient.isConnected()) {
