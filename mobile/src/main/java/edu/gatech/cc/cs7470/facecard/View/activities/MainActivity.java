@@ -22,7 +22,6 @@ import android.widget.Toast;
 
 import com.google.android.gms.plus.Plus;
 
-import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,14 +95,14 @@ public class MainActivity extends BaseActivity
         Log.d(TAG, "onCreate");
     }
 
-	//------------------------------ bluetooth part --------------------------------------------
+	//------------------------------ bluetooth part ---------------------------------------------------------
 
 	@Override
 	protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 		if (requestCode == Constants.REQUEST_ENABLE_BT) {
 			if (resultCode == RESULT_OK) {
 				if (!isBtRegistered) 	registerBluetooth();
-				if (!isConnected) pairToGlass();
+				if (!bluetoothConnected) pairToGlass();
 			}
 		}
 	}
@@ -118,17 +117,14 @@ public class MainActivity extends BaseActivity
 	}
 
 	private BluetoothAdapter mBluetoothAdapter;
-	private BluetoothSocket mBluetoothSocket;
+	private ObjectOutputStream oOutStream;
+	private boolean bluetoothConnected = false;
 	boolean isBtRegistered = false;
-	boolean isConnected = false;
 
 	private void blueToothWork() {
 		//check if bluetooth is already connected with glass
-		if (mBluetoothSocket != null && mBluetoothSocket.isConnected()) {
-			AlertDialog ad2 = new AlertDialog.Builder(MainActivity.this).setMessage("There's a connected Glass yet.")
-					.setPositiveButton("OK", null).setCancelable(false)
-					.create();
-			ad2.show();
+		if (bluetoothConnected) {
+			Toast.makeText(MainActivity.this, "There's a connected Glass yet.", Toast.LENGTH_SHORT).show();
 			return;
 		}
 		mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -142,7 +138,7 @@ public class MainActivity extends BaseActivity
 			startActivityForResult(enableBtIntent, Constants.REQUEST_ENABLE_BT);
 		} else {
 			if (!isBtRegistered) 	registerBluetooth();
-			if (!isConnected) pairToGlass();
+			if (!bluetoothConnected) pairToGlass();
 		}
 	}
 
@@ -160,21 +156,19 @@ public class MainActivity extends BaseActivity
 						// The 'which' argument contains the index position
 						// of the selected item
 						try {
-							mBluetoothSocket = bdArray[which].createRfcommSocketToServiceRecord(UUID.fromString(connectionUUID));
+							BluetoothSocket mBluetoothSocket = bdArray[which].createRfcommSocketToServiceRecord(UUID.fromString(connectionUUID));
 							mBluetoothSocket.connect();
+							bluetoothConnected = true;
+							oOutStream = new ObjectOutputStream(mBluetoothSocket.getOutputStream());
+							Log.v("debug", bdArray[which].getName() + which);
+							Toast.makeText(MainActivity.this, "Connection Succeeded!", Toast.LENGTH_SHORT).show();
+							//use an AsynTask to detect bt devices nearby and send data to glass periodically
+							new glassCommTask().execute();
 						} catch (Exception e) {
 							Log.v("exception", e.toString());
 							Toast.makeText(MainActivity.this, "please turn on FaceCard on Glass and try again", Toast.LENGTH_SHORT).show();
 							pairToGlass();
-							return;
 						}
-
-						isConnected = true;
-						Log.v("debug", bdArray[which].getName() + which);
-						Toast.makeText(MainActivity.this, "Connection Succeeded!", Toast.LENGTH_SHORT).show();
-
-						//use an AsynTask to detect bt devices nearby and send data to glass periodically
-						new glassCommTask().execute();
 					}
 				})
 				.setNegativeButton("Cancel", null)
@@ -185,7 +179,6 @@ public class MainActivity extends BaseActivity
 
 	public class glassCommTask extends AsyncTask<Void, Void, Void> {
 		private HashMap<String, BluetoothDevice> btMap2;
-		ObjectOutputStream oOutStream;
 		private final BroadcastReceiver mReceiver2 = new BroadcastReceiver() {
 			public void onReceive(Context context, Intent intent) {
 				String action = intent.getAction();
@@ -197,20 +190,22 @@ public class MainActivity extends BaseActivity
 					Log.v("debug", "found device: " + device.getName() + " " + device.getAddress());
 				} else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {  //finish detecting, get data from backend and send to glass
 					mBluetoothAdapter.cancelDiscovery();
-
+					Toast.makeText(MainActivity.this, "discovery finished", Toast.LENGTH_SHORT).show();
 					//request backend for data here
 
 					//send data to glass
 					ArrayList<FaceCard> bean = new ArrayList<FaceCard>();
 					for (BluetoothDevice device : btMap2.values())
-						bean.add(new FaceCard(device.getAddress(), "", device.getName(), ""));
+						bean.add(new FaceCard(device.getAddress(), "wegnahz", device.getName(), "gt"));
 					btMap2.clear();
 					Log.v("debug", bean.toString());
 					try {
 						oOutStream.writeObject(bean);
 						oOutStream.flush();
+						Toast.makeText(MainActivity.this, "sent to glass!", Toast.LENGTH_SHORT).show();
 					} catch (Exception e) {
 						Log.v("exception", e.toString());
+						bluetoothConnected = false;
 					}
 				}
 			}
@@ -221,11 +216,6 @@ public class MainActivity extends BaseActivity
 			// Register the BroadcastReceiver
 			registerReceiver(mReceiver2, new IntentFilter(BluetoothDevice.ACTION_FOUND)); // Don't forget to unregister during onDestroy
 			registerReceiver(mReceiver2, new IntentFilter(BluetoothAdapter.ACTION_DISCOVERY_FINISHED));
-			try {
-				oOutStream = new ObjectOutputStream(mBluetoothSocket.getOutputStream());
-			} catch (Exception e) {
-				Log.v("exception", e.toString());
-			}
 
 			while (true) {
 				//record all bluetooth devices
@@ -235,18 +225,20 @@ public class MainActivity extends BaseActivity
 
 				try {
 					while (true) {
-						Thread.sleep(5 * 1000);
+						Thread.sleep(30 * 1000);
 						if (!mBluetoothAdapter.isDiscovering()) break;
 					}
 				} catch (Exception e) {
+					Log.v("exception", e.toString());
 				}
 
-				publishProgress();
+				if (!bluetoothConnected) return null;
 			}
 		}
 
 		@Override
-		protected void onProgressUpdate(Void... progress) {
+		protected void onPostExecute(Void result) {
+			pairToGlass();
 		}
 
 		@Override
@@ -438,9 +430,6 @@ public class MainActivity extends BaseActivity
 		if (mGoogleApiClient.isConnected()) {
 			mGoogleApiClient.disconnect();
 		}
-		try {
-			if (mBluetoothSocket != null) mBluetoothSocket.close();
-		}catch (IOException e) { Log.v("exception", e.toString());}
 		super.onDestroy();
 	}
 

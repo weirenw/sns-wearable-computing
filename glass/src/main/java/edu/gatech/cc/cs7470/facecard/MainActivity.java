@@ -155,9 +155,10 @@ public class MainActivity extends Activity {
 	private void createCards(ArrayList<FaceCard> bean) {
 		mCards = new ArrayList<CardBuilder>();
 		for (FaceCard fc : bean) {
-			mCards.add(new CardBuilder(this, CardBuilder.Layout.TEXT)
-					.setText(fc.getName() + " " + fc.getBluetoothId())
-					.setFootnote("I'm the footer!"));
+			mCards.add(new CardBuilder(this, CardBuilder.Layout.AUTHOR)
+					.setHeading(fc.getName())
+					.setText(fc.getTag() + "\n" + fc.getAccountId())
+					.setFootnote(fc.getBluetoothId()));
 		}
 	}
 
