@@ -39,7 +39,6 @@ import java.util.UUID;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
 import edu.gatech.cc.cs7470.facecard.Controller.tasks.RegisterBluetoothTask;
-import edu.gatech.cc.cs7470.facecard.Controller.utils.BluetoothUtil;
 import edu.gatech.cc.cs7470.facecard.Model.Bluetooth;
 import edu.gatech.cc.cs7470.facecard.Model.FaceCard;
 import edu.gatech.cc.cs7470.facecard.Model.Profile;
@@ -65,7 +64,7 @@ public class MainActivity extends BaseActivity
 
     private int currentNavigationFragment;
 
-    private Profile profile;
+    private Profile mProfile;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,7 +76,7 @@ public class MainActivity extends BaseActivity
         currentNavigationFragment = 0;
 
         if (mGoogleApiClient.isConnected() && Plus.PeopleApi.getCurrentPerson(mGoogleApiClient) != null) {
-            profile = new Profile(Plus.PeopleApi.getCurrentPerson(mGoogleApiClient),
+	        mProfile = new Profile(Plus.PeopleApi.getCurrentPerson(mGoogleApiClient),
                     Plus.AccountApi.getAccountName(mGoogleApiClient));
         }
 
@@ -159,7 +158,7 @@ public class MainActivity extends BaseActivity
 			items[i] = bdArray[i].getName() + "\n" + bdArray[i].getAddress();
 		}
 
-		AlertDialog chooseBluetoothDialog = new AlertDialog.Builder(MainActivity.this)
+		final AlertDialog chooseBluetoothDialog = new AlertDialog.Builder(MainActivity.this)
 				.setTitle("Please select your Google Glass")
 				.setItems(items, new DialogInterface.OnClickListener() {
 					public void onClick(DialogInterface dialog, int which) {
@@ -427,57 +426,18 @@ public class MainActivity extends BaseActivity
 	}
 
     public Profile getProfile(){
-        return this.profile;
+        return this.mProfile;
     }
 
     private void registerBluetooth(){
-        final String mEmail=profile.getEmail();
-        final String addr = (new BluetoothUtil()).getBluetoothId();
-        final String mName = profile.getName();
-        final String mTagline = profile.getTagline();
-        profile.setBluetoothInfo(new Bluetooth(addr,mEmail));
-        final String mBluetoothID = profile.getBluetoothInfo().getBluetoothId();
+	    final String mEmail=mProfile.getEmail();
+	    final String mName = mProfile.getName();
+	    final String mTagline = mProfile.getTagline();
 
-
-	    new RegisterBluetoothTask().execute(mEmail,mBluetoothID, mName, mTagline);
-	    isBtRegistered = true;
-
-	    //save
-	    SharedPreferences prefs = getSharedPreferences(Constants.PACKAGE_NAME, MODE_PRIVATE);
-	    SharedPreferences.Editor editor = prefs.edit();
-	    editor.putString(Constants.SHARED_PREFERENCES_BLUETOOTH, addr);
-	    editor.commit();
-
-
-        /*AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Bluetooth Registration");
-        builder.setMessage("You have to register your Bluetooth device to use the application.\n" + addr);
-        //Yes
-        builder.setPositiveButton("Register", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-
-                new RegisterBluetoothTask().execute(mEmail,mBluetoothID, mName, mTagline);
-
-                //save
-                SharedPreferences prefs = getSharedPreferences(Constants.PACKAGE_NAME, MODE_PRIVATE);
-                SharedPreferences.Editor editor = prefs.edit();
-                editor.putString(Constants.SHARED_PREFERENCES_BLUETOOTH, addr);
-                editor.commit();
-
-            }
-        });
-
-        builder.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                finish();
-            }
-        });
-
-        AlertDialog dialog = builder.create();
-        dialog.show();
-		*/
+	    String macAddress = mBluetoothAdapter.getAddress();
+	    mProfile.setBluetoothInfo(new Bluetooth(macAddress, mEmail));
+	    Log.d(TAG,"Bluetooth id of user's device is " + macAddress);
+	    new RegisterBluetoothTask().execute(mEmail, macAddress, mName, mTagline);
     }
 
 	@Override

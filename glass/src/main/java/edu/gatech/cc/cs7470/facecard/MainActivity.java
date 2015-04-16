@@ -85,6 +85,7 @@ public class MainActivity extends Activity {
 	//this is a block function, it waits until connect with a phone (or get an exception)
 	private void checkConnection() {
 		if (bluetoothConnected) return;
+		if (connectingDialog != null && connectingDialog.isShowing()) return;
 		String message =  "Waiting for connection...\nThis Device Info:\nName: " + mBluetoothAdapter.getName() + "  \nAddress: " + mBluetoothAdapter.getAddress();
 		connectingDialog = new AlertDialog.Builder(this).setMessage(message).setCancelable(false).create();
 		connectingDialog.show();
@@ -201,6 +202,7 @@ public class MainActivity extends Activity {
 			oInStream.close();
 			mServerSocket.close();
 		}catch (Exception e) { Log.v("exception", e.toString());}
+		unregisterReceiver(mReceiver);
 		super.onDestroy();
 	}
 

@@ -18,5 +18,5 @@ public class Constants {
     public static final String SHARED_PREFERENCES_BLUETOOTH = "bluetooth"; //Bluetooth
 
     //TODO: change url
-    public static final String REGISTER_ACCOUNT_URL = "http://ec2-54-68-110-119.us-west-2.compute.amazonaws.com/facecard/setAccount.php";
+    public static final String REGISTER_ACCOUNT_URL = "http://ec2-54-68-110-119.us-west-2.compute.amazonaws.com/facecard/setAccount.php?";
 }

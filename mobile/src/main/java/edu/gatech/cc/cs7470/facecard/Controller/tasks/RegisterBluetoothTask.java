@@ -4,21 +4,15 @@ import android.os.AsyncTask;
 import android.util.Log;
 
 import org.apache.http.HttpResponse;
-import org.apache.http.NameValuePair;
-import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.HttpClient;
-import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.message.BasicNameValuePair;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
-import java.util.ArrayList;
-import java.util.List;
+import java.net.URLEncoder;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
 
@@ -39,10 +33,10 @@ public class RegisterBluetoothTask extends AsyncTask<String, String, String> {
         String tag = params[3];
 
         //create string
-        String rest = "?bluetooth_id=" + bluetoothId + "&google_account=" + accountId
+        String rest = "bluetooth_id=" + bluetoothId + "&google_account=" + accountId
                 + "&google_password=" + "pwd" + "&name=" +  name + "&personal_tags=" + tag;
 
-        rest = rest.replace(" ", "%20");
+        try {rest = URLEncoder.encode(rest, "UTF-8"); } catch (Exception e) {}
         Log.d(TAG, rest);
 
         HttpClient httpClient = new DefaultHttpClient();
@@ -66,10 +60,9 @@ public class RegisterBluetoothTask extends AsyncTask<String, String, String> {
 
             return stringBuilder.toString();
 
-        } catch (ClientProtocolException e) {
+        } catch (Exception e) {
             Log.d(TAG, e.toString());
-        } catch (IOException e) {
-            Log.d(TAG, e.toString());
+	        return "false";
         }
 
 //        BasicNameValuePair accountPair = new BasicNameValuePair("google_account", accountId);
@@ -117,7 +110,7 @@ public class RegisterBluetoothTask extends AsyncTask<String, String, String> {
 //            Log.d(TAG, e.toString());
 //        }
 
-        return null;
+        return "true";
     }
 
     @Override
