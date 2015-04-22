@@ -35,6 +35,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import edu.gatech.cc.cs7470.facecard.Constants;
@@ -49,6 +50,8 @@ import edu.gatech.cc.cs7470.facecard.View.fragments.NavigationDrawerFragment;
 
 public class MainActivity extends BaseActivity
         implements NavigationDrawerFragment.NavigationDrawerCallbacks {
+	final int TEST_TOTAL = 10;
+
 	final String connectionUUID = "0f3561b9-bda5-4672-84ff-ab1f98e349b6";
     private static final String TAG = "FaceCard MainActivity";
 
@@ -209,6 +212,17 @@ public class MainActivity extends BaseActivity
 		}
 	}
 
+	private void sendAsyncHttpRequest(String url) {
+		StrictMode.ThreadPolicy tp = StrictMode.ThreadPolicy.LAX;
+		StrictMode.setThreadPolicy(tp);
+		try {
+			URL obj = new URL(url);
+			obj.openStream();
+		}catch (Exception e) {
+			Log.v("exception", e.toString());
+		}
+	}
+
 	private ArrayList<FaceCard> askBackendForBean(Collection<BluetoothDevice> btDevices) {  //this is a block function, it waits until receive response of http request
 		ArrayList<FaceCard> bean = new ArrayList<FaceCard>();
 		try {
@@ -237,7 +251,9 @@ public class MainActivity extends BaseActivity
 	}
 
 	public class glassCommTask extends AsyncTask<Void, Void, Void> {
+		private long startTime;
 		private HashMap<String, BluetoothDevice> btMap2;
+		private HashMap<String, Long> detectedTime;
 		private final BroadcastReceiver mReceiver2 = new BroadcastReceiver() {
 			public void onReceive(Context context, Intent intent) {
 				String action = intent.getAction();
@@ -245,15 +261,20 @@ public class MainActivity extends BaseActivity
 				if (BluetoothDevice.ACTION_FOUND.equals(action)) {
 					// Get the BluetoothDevice object from the Intent
 					BluetoothDevice device = intent.getParcelableExtra(BluetoothDevice.EXTRA_DEVICE);
+					if (btMap2.containsKey(device.getAddress())) return;
 					btMap2.put(device.getAddress(), device);
 					Log.v("debug", "found device: " + device.getName() + " " + device.getAddress());
+
+					//For Latency Test Use
+					try{sendAsyncHttpRequest("http://54.68.110.119/facecard/addLatency.php?bluetooth_id="+URLEncoder.encode(device.getAddress(),"UTF-8")+"&label="+1+"&total="+TEST_TOTAL+"&latency="+(System.currentTimeMillis() - startTime)+");");} catch (Exception e){}
+					detectedTime.put(device.getAddress(), System.currentTimeMillis());
 				} else if (BluetoothAdapter.ACTION_DISCOVERY_FINISHED.equals(action)) {  //finish detecting, get data from backend and send to glass
 					mBluetoothAdapter.cancelDiscovery();
 					Toast.makeText(MainActivity.this, "discovery finished", Toast.LENGTH_SHORT).show();
 					//request backend for data here
+					ArrayList<FaceCard> bean = askBackendForBean(btMap2.values());
 
 					//send data to glass
-					ArrayList<FaceCard> bean = askBackendForBean(btMap2.values());
 					btMap2.clear();
 					Log.v("debug", bean.toString());
 					try {
@@ -264,6 +285,10 @@ public class MainActivity extends BaseActivity
 						Log.v("exception", e.toString());
 						bluetoothConnected = false;
 					}
+
+					//For Latency Test Use
+					for (Map.Entry<String, Long> entry : detectedTime.entrySet())
+						try{sendAsyncHttpRequest("http://54.68.110.119/facecard/addLatency.php?bluetooth_id="+URLEncoder.encode(entry.getKey(),"UTF-8")+"&label="+2+"&total="+TEST_TOTAL+"&latency="+(System.currentTimeMillis() - entry.getValue())+");");} catch (Exception e){}
 				}
 			}
 		};
@@ -277,9 +302,10 @@ public class MainActivity extends BaseActivity
 			while (true) {
 				//record all bluetooth devices
 				btMap2 = new HashMap<String, BluetoothDevice>();
+				detectedTime = new HashMap<String, Long>();
 				//start discover process, it lasts 12 seconds
 				mBluetoothAdapter.startDiscovery();
-
+				startTime = System.currentTimeMillis();
 				try {
 					while (true) {
 						Thread.sleep(30 * 1000);
