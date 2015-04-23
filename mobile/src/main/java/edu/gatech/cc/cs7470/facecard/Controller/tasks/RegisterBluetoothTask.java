@@ -110,7 +110,7 @@ public class RegisterBluetoothTask extends AsyncTask<String, String, String> {
 //            Log.d(TAG, e.toString());
 //        }
 
-        return "true";
+
     }
 
     @Override

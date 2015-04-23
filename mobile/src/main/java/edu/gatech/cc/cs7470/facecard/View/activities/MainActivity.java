@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.StrictMode;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.widget.DrawerLayout;
@@ -54,7 +55,9 @@ public class MainActivity extends BaseActivity
 
 	final String connectionUUID = "0f3561b9-bda5-4672-84ff-ab1f98e349b6";
     private static final String TAG = "FaceCard MainActivity";
-
+    private Handler btToggleHandler;
+    private Runnable btDisableRunnable;
+    private Runnable btEnableRunnable;
     /**
      * Fragment
      */
@@ -83,6 +86,31 @@ public class MainActivity extends BaseActivity
                     Plus.AccountApi.getAccountName(mGoogleApiClient));
         }
 
+/*******BT toggle stuff ******/
+        btToggleHandler = new Handler();
+
+        btDisableRunnable = new Runnable() {
+            public void run() {
+                if (mBluetoothAdapter.isEnabled()) {
+                    mBluetoothAdapter.disable();
+                    Log.d(TAG,"bluetooth disabled");
+                }
+                btToggleHandler.postDelayed(btEnableRunnable, 3000);
+            }
+        };
+        btEnableRunnable = new Runnable() {
+            public void run() {
+                if (!mBluetoothAdapter.isEnabled()) {
+                    Log.d(TAG,"bluetooth enabled");
+                    mBluetoothAdapter.enable();
+                    new BtToggleLogTimeTask().execute(System.currentTimeMillis());
+                }
+                btToggleHandler.postDelayed(btDisableRunnable, 20000);
+            }
+        };
+        btToggleHandler.postDelayed(btDisableRunnable, 20000);
+        //app startup -> 20s -> disable -> 3s -> enable -> 20s -> disable -> 3s -> enable -> etc etc
+/*******BT toggle stuff ******/
         //check for bluetooth registration
         SharedPreferences prefs = getSharedPreferences(Constants.PACKAGE_NAME, MODE_PRIVATE);
 
@@ -249,6 +277,14 @@ public class MainActivity extends BaseActivity
 			return bean;
 		}
 	}
+    public class BtToggleLogTimeTask extends AsyncTask<Long, Void, Integer>{
+        @Override
+        protected Integer doInBackground(Long... params){
+            try{sendAsyncHttpRequest("http://54.68.110.119/facecard/addTime.php?label=client&time="+params[0]);} catch (Exception e){}
+            Log.d(TAG,"logging the current sys time: " + params[0]);
+            return 1;
+        }
+    }
 
 	public class glassCommTask extends AsyncTask<Void, Void, Void> {
 		private long startTime;
@@ -443,6 +479,12 @@ public class MainActivity extends BaseActivity
         return super.onOptionsItemSelected(item);
     }
 
+    @Override
+    public void onPause(){
+        super.onPause();
+        btToggleHandler.removeCallbacks(btDisableRunnable);
+        btToggleHandler.removeCallbacks(btEnableRunnable);
+    }
 	/* Called whenever we call invalidateOptionsMenu() */
 	@Override
 	public boolean onPrepareOptionsMenu(Menu menu) {
